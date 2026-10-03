@@ -1,3 +1,4 @@
+from app.parser import parse_reading
 import time
 
 
@@ -37,8 +38,19 @@ def receive():
                 for line in lines:
                     line = line.strip()
 
-                    if line:
-                        print(f"Received: {line}")
+                    if not line:
+                        continue
+
+                    reading = parse_reading(line)
+
+                    if reading is None:
+                        print(f"Invalid reading: {line}")
+                        continue
+
+                    print(
+                        f"Weight: {reading['weight']:.2f} "
+                        f"{reading['unit']}"
+                    )
 
 
 if __name__ == "__main__":
