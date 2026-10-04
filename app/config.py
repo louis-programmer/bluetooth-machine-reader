@@ -1,0 +1,2 @@
+TRANSPORT = "rfcomm"
+#TRANSPORT = "simulator"

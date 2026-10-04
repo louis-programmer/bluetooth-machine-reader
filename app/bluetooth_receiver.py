@@ -1,38 +1,32 @@
-from app.parser import parse_reading
-import time
-
-
-# -----------------------------------
-# Bluetooth receiver settings
-# -----------------------------------
-
-RFCOMM_DEVICE = "/dev/rfcomm0"
-
-
-# -----------------------------------
-# Bluetooth receiver
-# -----------------------------------
+from app.receiver import Receiver
+from app.config import TRANSPORT
 
 def receive():
+    receiver = Receiver()
+
     print("Bluetooth receiver started.")
-    print(f"Device: {RFCOMM_DEVICE}")
-    print("Waiting for machine data...\n")
+    print(f"Transport: {TRANSPORT}")
+    print("Connecting...\n")
+
+    if not receiver.connect():
+        print("Connection failed.")
+        return
+
+    print("Connected.\n")
 
     buffer = ""
 
-    with open(RFCOMM_DEVICE, "r") as bluetooth:
+    try:
         while True:
-            data = bluetooth.read(1)
+            data = receiver.transport.read()
 
             if not data:
-                time.sleep(0.01)
                 continue
 
             buffer += data
 
             if "\n" in buffer:
                 lines = buffer.split("\n")
-
                 buffer = lines.pop()
 
                 for line in lines:
@@ -41,7 +35,7 @@ def receive():
                     if not line:
                         continue
 
-                    reading = parse_reading(line)
+                    reading = receiver.receive_line(line)
 
                     if reading is None:
                         print(f"Invalid reading: {line}")
@@ -51,6 +45,13 @@ def receive():
                         f"Weight: {reading['weight']:.2f} "
                         f"{reading['unit']}"
                     )
+
+    except KeyboardInterrupt:
+        print("\nStopping receiver...")
+
+    finally:
+        receiver.disconnect()
+        print("Disconnected.")
 
 
 if __name__ == "__main__":

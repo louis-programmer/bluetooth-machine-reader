@@ -1,0 +1,105 @@
+from app.bluetooth.rfcomm import RFCOMMTransport
+import tty
+
+
+def test_rfcomm_starts_disconnected():
+    transport = RFCOMMTransport()
+
+    assert transport.is_connected() is False
+
+
+def test_rfcomm_connects_successfully(monkeypatch):
+    class FakeConnection:
+
+        def fileno(self):
+            return 1
+
+        def close(self):
+            pass
+
+    connection = FakeConnection()
+
+    def fake_open(device, mode):
+        return connection
+
+    monkeypatch.setattr("builtins.open", fake_open)
+    monkeypatch.setattr(tty, "setraw", lambda fd: None)
+
+    transport = RFCOMMTransport("/fake/device")
+
+    result = transport.connect()
+
+    assert result is True
+    assert transport.is_connected() is True
+    assert transport.connection is connection
+
+
+def test_rfcomm_connection_error(monkeypatch):
+    def fake_open(device, mode):
+        raise OSError("Device unavailable")
+
+    monkeypatch.setattr("builtins.open", fake_open)
+
+    transport = RFCOMMTransport("/fake/device")
+
+    result = transport.connect()
+
+    assert result is False
+    assert transport.is_connected() is False
+    assert transport.connection is None
+
+
+def test_rfcomm_disconnects(monkeypatch):
+    class FakeConnection:
+
+        def __init__(self):
+            self.closed = False
+
+        def fileno(self):
+            return 1
+
+        def close(self):
+            self.closed = True
+
+    connection = FakeConnection()
+
+    def fake_open(device, mode):
+        return connection
+
+    monkeypatch.setattr("builtins.open", fake_open)
+    monkeypatch.setattr(tty, "setraw", lambda fd: None)
+
+    transport = RFCOMMTransport("/fake/device")
+
+    transport.connect()
+    transport.disconnect()
+
+    assert connection.closed is True
+    assert transport.is_connected() is False
+
+
+def test_rfcomm_read(monkeypatch):
+    class FakeConnection:
+
+        def fileno(self):
+            return 1
+
+        def read(self, size):
+            return "3"
+
+        def close(self):
+            pass
+
+    def fake_open(device, mode):
+        return FakeConnection()
+
+    monkeypatch.setattr("builtins.open", fake_open)
+    monkeypatch.setattr(tty, "setraw", lambda fd: None)
+
+    transport = RFCOMMTransport("/fake/device")
+
+    transport.connect()
+
+    result = transport.read()
+
+    assert result == "3"
