@@ -1,0 +1,7 @@
+21:10:58.951 Connecting to Unknown Device ...
+21:10:58.951 Connected
+21:11:00.951 RAW: '37.00kg'
+21:11:00.952   37.00kg
+21:11:02.951 RAW: '36.95kg'
+21:11:02.952   36.95kg
+21:11:04.321 Disconnected

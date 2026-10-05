@@ -94,3 +94,146 @@ def test_receiver_rejects_invalid_reading():
 
     assert result is None
     assert receiver.state == ReceiverState.RECEIVING
+
+
+def test_receiver_processes_complete_message():
+    receiver = Receiver(FakeTransport())
+
+    result = receiver.process_data("37.00kg\n")
+
+    assert result == [
+        {
+            "weight": 37.00,
+            "unit": "kg",
+        }
+    ]
+
+
+def test_receiver_processes_multiple_messages():
+    receiver = Receiver(FakeTransport())
+
+    result = receiver.process_data(
+        "37.00kg\n36.95kg\n35.35kg\n"
+    )
+
+    assert result == [
+        {
+            "weight": 37.00,
+            "unit": "kg",
+        },
+        {
+            "weight": 36.95,
+            "unit": "kg",
+        },
+        {
+            "weight": 35.35,
+            "unit": "kg",
+        },
+    ]
+
+
+def test_receiver_handles_split_message():
+    receiver = Receiver(FakeTransport())
+
+    result = receiver.process_data("37.0")
+
+    assert result == []
+
+    result = receiver.process_data("0kg\n")
+
+    assert result == [
+        {
+            "weight": 37.00,
+            "unit": "kg",
+        }
+    ]
+
+
+def test_receiver_handles_message_split_across_multiple_chunks():
+    receiver = Receiver(FakeTransport())
+
+    result = receiver.process_data("36.")
+    assert result == []
+
+    result = receiver.process_data("95")
+    assert result == []
+
+    result = receiver.process_data("kg\n")
+    assert result == [
+        {
+            "weight": 36.95,
+            "unit": "kg",
+        }
+    ]
+
+
+def test_receiver_handles_multiple_split_messages():
+    receiver = Receiver(FakeTransport())
+
+    result = receiver.process_data("37.0")
+    assert result == []
+
+    result = receiver.process_data(
+        "0kg\n36.95kg\n35."
+    )
+
+    assert result == [
+        {
+            "weight": 37.00,
+            "unit": "kg",
+        },
+        {
+            "weight": 36.95,
+            "unit": "kg",
+        },
+    ]
+
+
+    result = receiver.process_data("35kg\n")
+
+    assert result == [
+        {
+            "weight": 35.35,
+            "unit": "kg",
+        }
+    ]
+
+def test_receiver_ignores_empty_data():
+    receiver = Receiver(FakeTransport())
+
+    result = receiver.process_data("")
+
+    assert result == []
+
+
+def test_receiver_ignores_invalid_data_between_readings():
+    receiver = Receiver(FakeTransport())
+
+    result = receiver.process_data(
+        "37.00kg\n"
+        "hello\n"
+        "36.95kg\n"
+    )
+
+    assert result == [
+        {
+            "weight": 37.00,
+            "unit": "kg",
+        },
+        {
+            "weight": 36.95,
+            "unit": "kg",
+        },
+    ]
+
+
+def test_receiver_keeps_incomplete_message_in_buffer():
+    receiver = Receiver(FakeTransport())
+
+    receiver.process_data("37.")
+
+    assert receiver.buffer == "37."
+
+    receiver.process_data("00kg\n")
+
+    assert receiver.buffer == ""

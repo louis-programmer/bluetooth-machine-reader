@@ -1,3 +1,4 @@
+import os
 import tty
 
 from app.bluetooth.transport import BluetoothTransport
@@ -5,13 +6,18 @@ from app.bluetooth.transport import BluetoothTransport
 
 class RFCOMMTransport(BluetoothTransport):
 
-    def __init__(self, device="/dev/rfcomm0"):
+    def __init__(
+        self,
+        device="/dev/rfcomm0",
+        device_identifier=None
+    ):
         self.device = device
+        self.device_identifier = device_identifier
         self.connection = None
 
     def connect(self):
         try:
-            self.connection = open(self.device, "r")
+            self.connection = open(self.device, "rb")
             tty.setraw(self.connection.fileno())
         except OSError:
             self.connection = None
@@ -28,7 +34,15 @@ class RFCOMMTransport(BluetoothTransport):
         if self.connection is None:
             return ""
 
-        return self.connection.read(1)
+        data = os.read(
+            self.connection.fileno(),
+            1024
+        )
+
+        return data.decode(
+            "utf-8",
+            errors="replace"
+        )
 
     def is_connected(self):
         return self.connection is not None

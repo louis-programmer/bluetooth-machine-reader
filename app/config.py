@@ -1,2 +1,3 @@
 TRANSPORT = "rfcomm"
 #TRANSPORT = "simulator"
+DEVICE_IDENTIFIER = "CPF25015"

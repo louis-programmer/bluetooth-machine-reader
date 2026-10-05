@@ -1,4 +1,5 @@
 from app.bluetooth.rfcomm import RFCOMMTransport
+import os
 import tty
 
 
@@ -84,17 +85,21 @@ def test_rfcomm_read(monkeypatch):
         def fileno(self):
             return 1
 
-        def read(self, size):
-            return "3"
-
         def close(self):
             pass
 
     def fake_open(device, mode):
+        assert mode == "rb"
         return FakeConnection()
+
+    def fake_read(fd, size):
+        assert fd == 1
+        assert size == 1024
+        return b"37.00kg\n"
 
     monkeypatch.setattr("builtins.open", fake_open)
     monkeypatch.setattr(tty, "setraw", lambda fd: None)
+    monkeypatch.setattr(os, "read", fake_read)
 
     transport = RFCOMMTransport("/fake/device")
 
@@ -102,4 +107,4 @@ def test_rfcomm_read(monkeypatch):
 
     result = transport.read()
 
-    assert result == "3"
+    assert result == "37.00kg\n"
