@@ -17,7 +17,7 @@ class RFCOMMTransport(BluetoothTransport):
 
     def connect(self):
         try:
-            self.connection = open(self.device, "rb")
+            self.connection = open(self.device, "rb", buffering=0)
             tty.setraw(self.connection.fileno())
         except OSError:
             self.connection = None

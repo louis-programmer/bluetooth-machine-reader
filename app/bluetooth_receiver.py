@@ -2,6 +2,7 @@ from datetime import datetime
 
 from app.receiver import Receiver
 from app.diagnostics.recorder import DiagnosticRecorder
+from app.formatter import format_reading
 
 
 def timestamp():
@@ -97,8 +98,7 @@ def receive():
             for reading in readings:
                 message = (
                     f"{timestamp()}   "
-                    f"{reading['weight']:.2f}"
-                    f"{reading['unit']}"
+                    f"{format_reading(reading)}"
                 )
 
                 # Client-facing output only.

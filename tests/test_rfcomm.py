@@ -20,7 +20,7 @@ def test_rfcomm_connects_successfully(monkeypatch):
 
     connection = FakeConnection()
 
-    def fake_open(device, mode):
+    def fake_open(device, mode, buffering=0):
         return connection
 
     monkeypatch.setattr("builtins.open", fake_open)
@@ -36,7 +36,7 @@ def test_rfcomm_connects_successfully(monkeypatch):
 
 
 def test_rfcomm_connection_error(monkeypatch):
-    def fake_open(device, mode):
+    def fake_open(device, mode, buffering=0):
         raise OSError("Device unavailable")
 
     monkeypatch.setattr("builtins.open", fake_open)
@@ -64,7 +64,7 @@ def test_rfcomm_disconnects(monkeypatch):
 
     connection = FakeConnection()
 
-    def fake_open(device, mode):
+    def fake_open(device, mode, buffering=0):
         return connection
 
     monkeypatch.setattr("builtins.open", fake_open)
@@ -88,7 +88,7 @@ def test_rfcomm_read(monkeypatch):
         def close(self):
             pass
 
-    def fake_open(device, mode):
+    def fake_open(device, mode, buffering=0):
         assert mode == "rb"
         return FakeConnection()
 
