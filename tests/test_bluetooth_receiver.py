@@ -1,0 +1,96 @@
+import pytest
+
+from app import bluetooth_receiver
+
+
+class FakeTransport:
+
+    def __init__(self):
+        self.connected = False
+        self.disconnected = False
+
+    @property
+    def device_identifier(self):
+        return "CPF25015"
+
+    def connect(self):
+        self.connected = True
+        return True
+
+    def disconnect(self):
+        self.connected = False
+        self.disconnected = True
+
+    def read(self):
+        raise OSError("Bluetooth connection lost")
+
+    def is_connected(self):
+        return self.connected
+
+def test_read_error_is_handled_and_connection_is_closed(
+    monkeypatch,
+    capsys,
+    tmp_path,
+):
+    transport = FakeTransport()
+
+    class FakeReceiver:
+
+        def __init__(self):
+            self.transport = transport
+
+        def connect(self):
+            return self.transport.connect()
+
+        def disconnect(self):
+            self.transport.disconnect()
+
+        def process_data(self, data):
+            return []
+
+    class FakeRecorder:
+
+        def __init__(self):
+            self.messages = []
+            self.stopped = False
+
+        def start(self, device_identifier):
+            return tmp_path / "diagnostics.txt"
+
+        def record(self, message):
+            self.messages.append(message)
+
+        def stop(self):
+            self.stopped = True
+
+    recorder = FakeRecorder()
+
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "Receiver",
+        FakeReceiver,
+    )
+
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "DiagnosticRecorder",
+        lambda: recorder,
+    )
+
+    # The application should handle the read error without
+    # allowing the exception to escape.
+    bluetooth_receiver.receive()
+
+    output = capsys.readouterr().out
+
+    assert "CPF25015" in output
+    assert "Bluetooth connection lost" in output
+    assert transport.disconnected is True
+    assert recorder.stopped is True
+
+    assert any(
+        "Bluetooth connection lost" in message
+        for message in recorder.messages
+    )
+
+    assert "Disconnected" in recorder.messages

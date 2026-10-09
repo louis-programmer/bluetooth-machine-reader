@@ -72,7 +72,7 @@ def receive():
             recorder.stop()
             recorder = None
 
-    # -----------------------------------
+      # -----------------------------------
     # Receive
     # -----------------------------------
 
@@ -121,18 +121,30 @@ def receive():
             f"\n{timestamp()} Stopping receiver..."
         )
 
+    except OSError as error:
+        error_message = (
+            f"Bluetooth read error: {error}"
+        )
+
+        print(
+            f"{timestamp()} {error_message}"
+        )
+
+        if recorder is not None:
+            try:
+                recorder.record(error_message)
+            except OSError:
+                pass
+
     finally:
         if recorder is not None:
             try:
                 recorder.record("Disconnected")
-                recorder.stop()
             except OSError:
+                pass
+            finally:
                 recorder.stop()
 
         receiver.disconnect()
 
         print(f"{timestamp()} Disconnected")
-
-
-if __name__ == "__main__":
-    receive()

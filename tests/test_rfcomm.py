@@ -108,3 +108,31 @@ def test_rfcomm_read(monkeypatch):
     result = transport.read()
 
     assert result == "37.00kg\n"
+
+def test_rfcomm_read_error_is_propagated(monkeypatch):
+    class FakeConnection:
+
+        def fileno(self):
+            return 1
+
+        def close(self):
+            pass
+
+    def fake_open(device, mode, buffering=0):
+        return FakeConnection()
+
+    def fake_read(fd, size):
+        raise OSError("Bluetooth connection lost")
+
+    monkeypatch.setattr("builtins.open", fake_open)
+    monkeypatch.setattr(tty, "setraw", lambda fd: None)
+    monkeypatch.setattr(os, "read", fake_read)
+
+    transport = RFCOMMTransport("/fake/device")
+    transport.connect()
+
+    import pytest
+
+    with pytest.raises(OSError, match="Bluetooth connection lost"):
+        transport.read()
+
