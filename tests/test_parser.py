@@ -79,3 +79,25 @@ def test_parser_uses_configured_unit(monkeypatch):
     }
 
 
+def test_rejects_negative_reading():
+    result = parser.parse_reading("-5.00kg")
+
+    assert result is None
+
+
+def test_rejects_reading_with_multiple_decimal_points():
+    result = parser.parse_reading("37.0.0kg")
+
+    assert result is None
+
+
+def test_rejects_reading_with_missing_numeric_value():
+    result = parser.parse_reading("kg")
+
+    assert result is None
+
+
+def test_rejects_reading_with_trailing_characters():
+    result = parser.parse_reading("37.00kgabc")
+
+    assert result is None

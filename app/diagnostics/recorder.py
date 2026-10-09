@@ -9,6 +9,9 @@ class DiagnosticRecorder:
         self.file = None
 
     def start(self, device_identifier):
+        # Close any existing recording before starting another.
+        self.stop()
+
         self.directory.mkdir(parents=True, exist_ok=True)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

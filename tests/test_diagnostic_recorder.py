@@ -72,3 +72,17 @@ def test_recorder_can_be_stopped_safely(tmp_path):
     recorder.stop()
 
     assert recorder.file is None
+
+
+def test_recorder_closes_previous_file_when_restarted(tmp_path):
+    recorder = DiagnosticRecorder(tmp_path)
+
+    recorder.start("CPF25015")
+    previous_file = recorder.file
+
+    recorder.start("CPF25015")
+
+    assert previous_file.closed is True
+    assert recorder.file is not previous_file
+
+    recorder.stop()
