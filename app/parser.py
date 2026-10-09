@@ -1,29 +1,31 @@
 import re
 
+from app.config import WEIGHT_UNIT
+
 
 # -----------------------------------
 # Reading parser
 # -----------------------------------
 
-WEIGHT_PATTERN = re.compile(
-    r"^\s*(\d+(?:\.\d+)?)\s*kg\s*$",
-    re.IGNORECASE
-)
-
-
 def parse_reading(line):
     """
-    Parse a machine reading such as:
+    Parse a machine reading using the configured weight unit.
 
+    Example:
         36.75kg
 
-    Returns a dictionary containing the
-    numeric weight and unit.
+    Returns a dictionary containing the numeric weight
+    and configured unit.
 
     Returns None if the line is invalid.
     """
 
-    match = WEIGHT_PATTERN.match(line)
+    pattern = re.compile(
+        rf"^\s*(\d+(?:\.\d+)?)\s*{re.escape(WEIGHT_UNIT)}\s*$",
+        re.IGNORECASE
+    )
+
+    match = pattern.match(line)
 
     if not match:
         return None
@@ -32,5 +34,5 @@ def parse_reading(line):
 
     return {
         "weight": weight,
-        "unit": "kg",
+        "unit": WEIGHT_UNIT,
     }

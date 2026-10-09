@@ -1,8 +1,8 @@
-from app.parser import parse_reading
+import app.parser as parser
 
 
 def test_valid_reading():
-    result = parse_reading("37.00kg")
+    result = parser.parse_reading("37.00kg")
 
     assert result == {
         "weight": 37.00,
@@ -11,7 +11,7 @@ def test_valid_reading():
 
 
 def test_valid_decimal_reading():
-    result = parse_reading("36.95kg")
+    result = parser.parse_reading("36.95kg")
 
     assert result == {
         "weight": 36.95,
@@ -20,7 +20,7 @@ def test_valid_decimal_reading():
 
 
 def test_valid_reading_with_spaces():
-    result = parse_reading("  36.75kg  ")
+    result = parser.parse_reading("  36.75kg  ")
 
     assert result == {
         "weight": 36.75,
@@ -29,18 +29,53 @@ def test_valid_reading_with_spaces():
 
 
 def test_invalid_text():
-    result = parse_reading("hello")
+    result = parser.parse_reading("hello")
 
     assert result is None
 
 
 def test_missing_unit():
-    result = parse_reading("36.75")
+    result = parser.parse_reading("36.75")
 
     assert result is None
 
 
 def test_empty_reading():
-    result = parse_reading("")
+    result = parser.parse_reading("")
 
     assert result is None
+
+
+def test_valid_reading_with_uppercase_unit():
+    result = parser.parse_reading("36.75KG")
+
+    assert result == {
+        "weight": 36.75,
+        "unit": "kg",
+    }
+
+
+def test_invalid_reading_with_unknown_unit():
+    result = parser.parse_reading("36.75lb")
+
+    assert result is None
+
+
+def test_invalid_reading_with_extra_text():
+    result = parser.parse_reading("Weight: 36.75kg")
+
+    assert result is None
+
+
+
+def test_parser_uses_configured_unit(monkeypatch):
+    monkeypatch.setattr(parser, "WEIGHT_UNIT", "lb")
+
+    result = parser.parse_reading("36.75lb")
+
+    assert result == {
+        "weight": 36.75,
+        "unit": "lb",
+    }
+
+
