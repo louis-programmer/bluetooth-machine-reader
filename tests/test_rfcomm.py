@@ -136,3 +136,32 @@ def test_rfcomm_read_error_is_propagated(monkeypatch):
     with pytest.raises(OSError, match="Bluetooth connection lost"):
         transport.read()
 
+
+def test_rfcomm_empty_read_marks_connection_as_disconnected(
+    monkeypatch,
+):
+    class FakeConnection:
+
+        def fileno(self):
+            return 1
+
+        def close(self):
+            pass
+
+    def fake_open(device, mode, buffering=0):
+        return FakeConnection()
+
+    def fake_read(fd, size):
+        return b""
+
+    monkeypatch.setattr("builtins.open", fake_open)
+    monkeypatch.setattr(tty, "setraw", lambda fd: None)
+    monkeypatch.setattr(os, "read", fake_read)
+
+    transport = RFCOMMTransport("/fake/device")
+    transport.connect()
+
+    result = transport.read()
+
+    assert result == ""
+    assert transport.is_connected() is False

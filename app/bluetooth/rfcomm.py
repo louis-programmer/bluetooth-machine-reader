@@ -39,6 +39,10 @@ class RFCOMMTransport(BluetoothTransport):
             1024
         )
 
+        if not data:
+            self.disconnect()
+            return ""
+
         return data.decode(
             "utf-8",
             errors="replace"

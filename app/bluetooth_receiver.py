@@ -72,7 +72,8 @@ def receive():
             recorder.stop()
             recorder = None
 
-      # -----------------------------------
+
+    # -----------------------------------
     # Receive
     # -----------------------------------
 
@@ -81,6 +82,9 @@ def receive():
             data = receiver.transport.read()
 
             if not data:
+                if not receiver.transport.is_connected():
+                    break
+
                 continue
 
             # Diagnostic recording happens silently.
@@ -148,3 +152,7 @@ def receive():
         receiver.disconnect()
 
         print(f"{timestamp()} Disconnected")
+
+
+if __name__ == "__main__":
+    receive()
