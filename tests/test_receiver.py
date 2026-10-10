@@ -96,6 +96,7 @@ def test_receiver_rejects_invalid_reading():
     assert receiver.state == ReceiverState.RECEIVING
 
 
+
 def test_receiver_processes_complete_message():
     receiver = Receiver(FakeTransport())
 

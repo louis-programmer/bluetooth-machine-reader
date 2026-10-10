@@ -1,0 +1,3 @@
+20:07:31.434 Connecting to CPF25015 ...
+20:07:31.434 Connected
+20:08:42.792 Disconnected

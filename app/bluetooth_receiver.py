@@ -85,6 +85,14 @@ def receive():
 
             if not data:
                 if not receiver.transport.is_connected():
+                    print(f"{timestamp()} Connection lost")
+
+                    if recorder is not None:
+                        try:
+                            recorder.record("Connection lost")
+                        except OSError:
+                            pass
+
                     break
 
                 continue

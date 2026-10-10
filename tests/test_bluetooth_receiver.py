@@ -335,3 +335,86 @@ def test_connection_failure_stops_recorder_and_disconnects(
     assert receiver.disconnect_called is True
     assert transport.disconnected is True
     assert "Connection failed." in recorder.messages
+
+def test_unexpected_disconnect_prints_connection_lost(
+    monkeypatch,
+    capsys,
+    tmp_path,
+):
+    class FakeTransport:
+        device_identifier = "CPF25015"
+
+        def __init__(self):
+            self.connected = False
+
+        def connect(self):
+            self.connected = True
+            return True
+
+        def disconnect(self):
+            self.connected = False
+
+        def read(self):
+            self.connected = False
+            return ""
+
+        def is_connected(self):
+            return self.connected
+
+    transport = FakeTransport()
+
+    class FakeReceiver:
+        def __init__(self):
+            from app.receiver import ReceiverState
+
+            self.transport = transport
+            self.state = ReceiverState.DISCONNECTED
+
+        def connect(self):
+            from app.receiver import ReceiverState
+
+            result = self.transport.connect()
+
+            if result:
+                self.state = ReceiverState.CONNECTED
+
+            return result
+
+        def disconnect(self):
+            from app.receiver import ReceiverState
+
+            self.transport.disconnect()
+            self.state = ReceiverState.DISCONNECTED
+
+    class FakeRecorder:
+        def start(self, device_identifier):
+            return tmp_path / "diagnostics.txt"
+
+        def record(self, message):
+            pass
+
+        def stop(self):
+            pass
+
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "Receiver",
+        FakeReceiver,
+    )
+
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "DiagnosticRecorder",
+        FakeRecorder,
+    )
+
+    bluetooth_receiver.receive()
+
+    output = capsys.readouterr().out
+
+    assert "Connecting to CPF25015" in output
+    assert "Connected" in output
+    assert "Connection lost" in output
+    assert "Disconnected" in output
+
+    
