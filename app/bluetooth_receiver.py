@@ -57,10 +57,12 @@ def receive():
         if recorder is not None:
             try:
                 recorder.record("Connection failed.")
-                recorder.stop()
             except OSError:
+                pass
+            finally:
                 recorder.stop()
 
+        receiver.disconnect()
         return
 
     print(f"{timestamp()} Connected")

@@ -269,3 +269,69 @@ def test_receiver_state_is_disconnected_after_transport_loss(
 
     assert receiver.state == ReceiverState.DISCONNECTED
     assert transport.connected is False
+
+def test_connection_failure_stops_recorder_and_disconnects(
+    monkeypatch,
+    capsys,
+    tmp_path,
+):
+    class FakeTransport:
+        device_identifier = "CPF25015"
+
+        def __init__(self):
+            self.disconnected = False
+
+        def disconnect(self):
+            self.disconnected = True
+
+    transport = FakeTransport()
+
+    class FakeReceiver:
+        def __init__(self):
+            self.transport = transport
+            self.disconnect_called = False
+
+        def connect(self):
+            return False
+
+        def disconnect(self):
+            self.disconnect_called = True
+            self.transport.disconnect()
+
+    class FakeRecorder:
+        def __init__(self):
+            self.messages = []
+            self.stopped = False
+
+        def start(self, device_identifier):
+            return tmp_path / "diagnostics.txt"
+
+        def record(self, message):
+            self.messages.append(message)
+
+        def stop(self):
+            self.stopped = True
+
+    receiver = FakeReceiver()
+    recorder = FakeRecorder()
+
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "Receiver",
+        lambda: receiver,
+    )
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "DiagnosticRecorder",
+        lambda: recorder,
+    )
+
+    bluetooth_receiver.receive()
+
+    output = capsys.readouterr().out
+
+    assert "Connection failed" in output
+    assert recorder.stopped is True
+    assert receiver.disconnect_called is True
+    assert transport.disconnected is True
+    assert "Connection failed." in recorder.messages
