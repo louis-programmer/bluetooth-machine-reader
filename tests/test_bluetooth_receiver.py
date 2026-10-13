@@ -482,3 +482,80 @@ def test_connection_exception_is_handled_and_cleaned_up(
     assert receiver.disconnect_called is True
     assert transport.disconnected is True
     assert recorder.stopped is True
+
+def test_idle_connection_does_not_report_connection_lost(
+    monkeypatch,
+    capsys,
+    tmp_path,
+):
+    class FakeTransport:
+        device_identifier = "CPF25015"
+
+        def __init__(self):
+            self.connected = False
+            self.read_count = 0
+
+        def connect(self):
+            self.connected = True
+            return True
+
+        def disconnect(self):
+            self.connected = False
+
+        def read(self):
+            self.read_count += 1
+
+            # Simulate three empty reads while still connected.
+            if self.read_count <= 3:
+                return ""
+
+            # Then simulate a genuine disconnection.
+            self.connected = False
+            return ""
+
+        def is_connected(self):
+            return self.connected
+
+    transport = FakeTransport()
+
+    class FakeReceiver:
+        def __init__(self):
+            self.transport = transport
+
+        def connect(self):
+            return self.transport.connect()
+
+        def disconnect(self):
+            self.transport.disconnect()
+
+        def process_data(self, data):
+            return []
+
+    class FakeRecorder:
+        def start(self, device_identifier):
+            return tmp_path / "diagnostics.txt"
+
+        def record(self, message):
+            pass
+
+        def stop(self):
+            pass
+
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "Receiver",
+        FakeReceiver,
+    )
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "DiagnosticRecorder",
+        FakeRecorder,
+    )
+
+    bluetooth_receiver.receive()
+
+    output = capsys.readouterr().out
+
+    assert "Connected" in output
+    assert "Connection lost" in output
+    assert transport.read_count == 4
