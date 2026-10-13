@@ -111,15 +111,19 @@ def test_rfcomm_read(monkeypatch):
 
 def test_rfcomm_read_error_is_propagated(monkeypatch):
     class FakeConnection:
+        def __init__(self):
+            self.closed = False
 
         def fileno(self):
             return 1
 
         def close(self):
-            pass
+            self.closed = True
+
+    connection = FakeConnection()
 
     def fake_open(device, mode, buffering=0):
-        return FakeConnection()
+        return connection
 
     def fake_read(fd, size):
         raise OSError("Bluetooth connection lost")
@@ -135,6 +139,11 @@ def test_rfcomm_read_error_is_propagated(monkeypatch):
 
     with pytest.raises(OSError, match="Bluetooth connection lost"):
         transport.read()
+
+    # The error should close the stale connection.
+    assert connection.closed is True
+    assert transport.is_connected() is False
+    assert transport.connection is None
 
 
 def test_rfcomm_empty_read_marks_connection_as_disconnected(

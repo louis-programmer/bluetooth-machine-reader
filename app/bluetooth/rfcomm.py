@@ -34,10 +34,14 @@ class RFCOMMTransport(BluetoothTransport):
         if self.connection is None:
             return ""
 
-        data = os.read(
-            self.connection.fileno(),
-            1024
-        )
+        try:
+            data = os.read(
+                self.connection.fileno(),
+                1024
+            )
+        except OSError:
+            self.disconnect()
+            raise
 
         if not data:
             self.disconnect()

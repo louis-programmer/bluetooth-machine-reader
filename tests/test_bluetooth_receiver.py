@@ -417,4 +417,68 @@ def test_unexpected_disconnect_prints_connection_lost(
     assert "Connection lost" in output
     assert "Disconnected" in output
 
-    
+def test_connection_exception_is_handled_and_cleaned_up(
+    monkeypatch,
+    capsys,
+    tmp_path,
+):
+    class FakeTransport:
+        device_identifier = "CPF25015"
+
+        def __init__(self):
+            self.disconnected = False
+
+        def disconnect(self):
+            self.disconnected = True
+
+    transport = FakeTransport()
+
+    class FakeReceiver:
+        def __init__(self):
+            self.transport = transport
+            self.disconnect_called = False
+
+        def connect(self):
+            raise OSError("Bluetooth adapter unavailable")
+
+        def disconnect(self):
+            self.disconnect_called = True
+            self.transport.disconnect()
+
+    class FakeRecorder:
+        def __init__(self):
+            self.messages = []
+            self.stopped = False
+
+        def start(self, device_identifier):
+            return tmp_path / "diagnostics.txt"
+
+        def record(self, message):
+            self.messages.append(message)
+
+        def stop(self):
+            self.stopped = True
+
+    receiver = FakeReceiver()
+    recorder = FakeRecorder()
+
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "Receiver",
+        lambda: receiver,
+    )
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "DiagnosticRecorder",
+        lambda: recorder,
+    )
+
+    bluetooth_receiver.receive()
+
+    output = capsys.readouterr().out
+
+    assert "Connection failed" in output
+    assert "Bluetooth adapter unavailable" in output
+    assert receiver.disconnect_called is True
+    assert transport.disconnected is True
+    assert recorder.stopped is True
