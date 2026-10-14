@@ -720,3 +720,68 @@ def test_keyboard_interrupt_during_connect_cleans_up(
     assert receiver.disconnect_called is True
     assert transport.disconnected is True
     assert recorder.stopped is True
+
+def test_unexpected_connection_error_cleans_up(
+    monkeypatch,
+    tmp_path,
+):
+    class FakeTransport:
+        device_identifier = "CPF25015"
+
+        def __init__(self):
+            self.disconnected = False
+
+        def disconnect(self):
+            self.disconnected = True
+
+    transport = FakeTransport()
+
+    class FakeReceiver:
+        def __init__(self):
+            self.transport = transport
+            self.disconnect_called = False
+
+        def connect(self):
+            raise RuntimeError("Unexpected Bluetooth failure")
+
+        def disconnect(self):
+            self.disconnect_called = True
+            self.transport.disconnect()
+
+    class FakeRecorder:
+        def __init__(self):
+            self.stopped = False
+
+        def start(self, device_identifier):
+            return tmp_path / "diagnostics.txt"
+
+        def record(self, message):
+            pass
+
+        def stop(self):
+            self.stopped = True
+
+    receiver = FakeReceiver()
+    recorder = FakeRecorder()
+
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "Receiver",
+        lambda: receiver,
+    )
+
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "DiagnosticRecorder",
+        lambda: recorder,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="Unexpected Bluetooth failure",
+    ):
+        bluetooth_receiver.receive()
+
+    assert receiver.disconnect_called is True
+    assert transport.disconnected is True
+    assert recorder.stopped is True

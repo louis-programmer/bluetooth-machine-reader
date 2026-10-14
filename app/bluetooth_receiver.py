@@ -98,6 +98,34 @@ def receive():
             except OSError:
                 pass
 
+    except Exception:
+        if recorder is not None:
+            try:
+                recorder.record(
+                    "Unexpected connection error"
+                )
+            except OSError:
+                pass
+
+            try:
+                recorder.stop()
+            except OSError as error:
+                print(
+                    f"{timestamp()} "
+                    f"Diagnostic cleanup error: {error}"
+                )
+
+        try:
+            receiver.disconnect()
+        except OSError as error:
+            print(
+                f"{timestamp()} "
+                f"Bluetooth cleanup error: {error}"
+            )
+
+        print(f"{timestamp()} Disconnected")
+        raise
+
     if not connected:
         print(f"{timestamp()} Connection failed.")
 
