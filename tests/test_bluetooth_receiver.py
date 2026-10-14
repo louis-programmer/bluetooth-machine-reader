@@ -607,3 +607,53 @@ def test_receiver_disconnects_even_if_recorder_stop_fails(
 
     assert transport.disconnected is True
     assert "Disconnected" in output
+
+
+def test_disconnect_error_is_reported_and_final_message_printed(
+    monkeypatch,
+    capsys,
+    tmp_path,
+):
+    transport = FakeTransport()
+
+    class FakeReceiver:
+        def __init__(self):
+            self.transport = transport
+
+        def connect(self):
+            return self.transport.connect()
+
+        def disconnect(self):
+            raise OSError("Bluetooth adapter cleanup failed")
+
+        def process_data(self, data):
+            return []
+
+    class FakeRecorder:
+        def start(self, device_identifier):
+            return tmp_path / "diagnostics.txt"
+
+        def record(self, message):
+            pass
+
+        def stop(self):
+            pass
+
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "Receiver",
+        FakeReceiver,
+    )
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "DiagnosticRecorder",
+        FakeRecorder,
+    )
+
+    bluetooth_receiver.receive()
+
+    output = capsys.readouterr().out
+
+    assert "Bluetooth cleanup error:" in output
+    assert "Bluetooth adapter cleanup failed" in output
+    assert "Disconnected" in output
