@@ -168,10 +168,22 @@ def receive():
                 recorder.record("Disconnected")
             except OSError:
                 pass
-            finally:
-                recorder.stop()
 
-        receiver.disconnect()
+            try:
+                recorder.stop()
+            except OSError as error:
+                print(
+                    f"{timestamp()} "
+                    f"Diagnostic cleanup error: {error}"
+                )
+
+        try:
+            receiver.disconnect()
+        except OSError as error:
+            print(
+                f"{timestamp()} "
+                f"Bluetooth cleanup error: {error}"
+            )
 
         print(f"{timestamp()} Disconnected")
 

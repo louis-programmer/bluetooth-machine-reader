@@ -559,3 +559,51 @@ def test_idle_connection_does_not_report_connection_lost(
     assert "Connected" in output
     assert "Connection lost" in output
     assert transport.read_count == 4
+
+def test_receiver_disconnects_even_if_recorder_stop_fails(
+    monkeypatch,
+    capsys,
+    tmp_path,
+):
+    transport = FakeTransport()
+
+    class FakeReceiver:
+        def __init__(self):
+            self.transport = transport
+
+        def connect(self):
+            return self.transport.connect()
+
+        def disconnect(self):
+            self.transport.disconnect()
+
+        def process_data(self, data):
+            return []
+
+    class FakeRecorder:
+        def start(self, device_identifier):
+            return tmp_path / "diagnostics.txt"
+
+        def record(self, message):
+            pass
+
+        def stop(self):
+            raise OSError("Could not close diagnostic file")
+
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "Receiver",
+        FakeReceiver,
+    )
+    monkeypatch.setattr(
+        bluetooth_receiver,
+        "DiagnosticRecorder",
+        FakeRecorder,
+    )
+
+    bluetooth_receiver.receive()
+
+    output = capsys.readouterr().out
+
+    assert transport.disconnected is True
+    assert "Disconnected" in output
