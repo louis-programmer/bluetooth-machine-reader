@@ -47,15 +47,54 @@ def receive():
 
     # -----------------------------------
     # Connect
+    # -----------------------------------
+
     try:
         connected = receiver.connect()
-    except OSError as error:
-        connected = False
-        print(f"{timestamp()} Connection failed: {error}")
+
+    except KeyboardInterrupt:
+        print(
+            f"\n{timestamp()} "
+            "Connection interrupted."
+        )
 
         if recorder is not None:
             try:
-                recorder.record(f"Connection failed: {error}")
+                recorder.record("Connection interrupted")
+            except OSError:
+                pass
+
+            try:
+                recorder.stop()
+            except OSError as error:
+                print(
+                    f"{timestamp()} "
+                    f"Diagnostic cleanup error: {error}"
+                )
+
+        try:
+            receiver.disconnect()
+        except OSError as error:
+            print(
+                f"{timestamp()} "
+                f"Bluetooth cleanup error: {error}"
+            )
+
+        print(f"{timestamp()} Disconnected")
+        raise
+
+    except OSError as error:
+        connected = False
+        print(
+            f"{timestamp()} "
+            f"Connection failed: {error}"
+        )
+
+        if recorder is not None:
+            try:
+                recorder.record(
+                    f"Connection failed: {error}"
+                )
             except OSError:
                 pass
 
@@ -68,12 +107,21 @@ def receive():
             except OSError:
                 pass
             finally:
-                recorder.stop()
+                try:
+                    recorder.stop()
+                except OSError as error:
+                    print(
+                        f"{timestamp()} "
+                        f"Diagnostic cleanup error: {error}"
+                    )
 
         try:
             receiver.disconnect()
         except OSError as error:
-            print(f"{timestamp()} Cleanup error: {error}")
+            print(
+                f"{timestamp()} "
+                f"Bluetooth cleanup error: {error}"
+            )
 
         return
 
