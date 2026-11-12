@@ -1,4 +1,4 @@
-TRANSPORT = "rfcomm"
-#TRANSPORT = "simulator"
+#TRANSPORT = "rfcomm"
+TRANSPORT = "simulator"
 DEVICE_IDENTIFIER = "CPF25015"
 WEIGHT_UNIT = "kg"
